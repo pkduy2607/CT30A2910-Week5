@@ -28,13 +28,19 @@ const fetchMigrationData = async () => {
 
 const getStyle = (migration_data) => {
     return (feature) => {
-        if(!feature.properties.id)
-            return;
-        const id = (feature.properties.id - 1) * 2;
-        const positive = migration_data.value[id];
-        const negative = migration_data.value[id + 1];
+        const kuntaCode = "KU" + (feature.properties.kunta || feature.properties.id);
+        
+        const areaIndices = migration_data.dimension["alue_23_20260101"].category.index;
+        const areaIndex = areaIndices[kuntaCode];
+        
+        if (areaIndex === undefined) return;
+
+        const positive = migration_data.value[areaIndex * 2];
+        const negative = migration_data.value[areaIndex * 2 + 1];
+        
         const hue = Math.min((positive / negative) ** 3 * 60, 120);
         const hsl_color = `hsl(${hue}, 75%, 50%)`;
+        
         return {
             weight: 2,
             color: hsl_color,
@@ -66,15 +72,23 @@ const createMap = async () => {
 
 const createFeatureHandler = (migration_data) => {
     return (feature, layer) => {
-        if(!feature.properties.id)
+        const kuntaCode = "KU" + (feature.properties.kunta || feature.properties.id);
+        const areaIndices = migration_data.dimension["alue_23_20260101"].category.index;
+        const areaIndex = areaIndices[kuntaCode];
+        
+        if (areaIndex === undefined) 
             return;
-        const id = feature.properties.id;
+
+        const positive = migration_data.value[areaIndex * 2];
+        const negative = migration_data.value[areaIndex * 2 + 1];
+        
+        const name = feature.properties.nimi || feature.properties.name || kuntaCode;
         layer.bindTooltip(feature.properties.name);
         layer.bindPopup(
             `<ul>
-                <li>Name: ${feature.properties.name}</li>
-                <li>Positive migration: ${migration_data.value[(id - 1) * 2]}</li>
-                <li>Negative migration: ${migration_data.value[(id - 1) * 2 + 1]}</li>
+                <li>Name: ${name}</li>
+                <li>Positive migration: ${positive}</li>
+                <li>Negative migration: ${negative}</li>
             </ul>`
         );
     }
